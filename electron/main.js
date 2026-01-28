@@ -585,7 +585,9 @@ ipcMain.handle('google:signIn', async (event) => {
             show: true,
             webPreferences: {
                 nodeIntegration: false,
-                contextIsolation: true
+                contextIsolation: true,
+                javascript: true,
+                webSecurity: true
             }
         });
 
@@ -593,6 +595,8 @@ ipcMain.handle('google:signIn', async (event) => {
         const http = require('http');
 
         return new Promise((resolve, reject) => {
+            let resolved = false;
+
             const server = http.createServer(async (req, res) => {
                 const url = new URL(req.url, 'http://localhost:8085');
 
@@ -602,8 +606,15 @@ ipcMain.handle('google:signIn', async (event) => {
                     res.writeHead(200, { 'Content-Type': 'text/html' });
                     res.end('<html><body><h1>Sign-in successful!</h1><p>You can close this window.</p><script>window.close();</script></body></html>');
 
-                    server.close();
-                    authWindow.close();
+                    try {
+                        server.close();
+                    } catch (e) { }
+                    if (!authWindow.isDestroyed()) {
+                        authWindow.close();
+                    }
+
+                    if (resolved) return;
+                    resolved = true;
 
                     try {
                         // Exchange code for tokens
@@ -643,7 +654,7 @@ ipcMain.handle('google:signIn', async (event) => {
                                 name: userInfo.name
                             });
                         } else {
-                            resolve({ success: false, error: 'Failed to get access token' });
+                            resolve({ success: false, error: tokens.error_description || 'Failed to get access token' });
                         }
                     } catch (err) {
                         resolve({ success: false, error: err.message });
@@ -655,8 +666,16 @@ ipcMain.handle('google:signIn', async (event) => {
                 authWindow.loadURL(authUrl);
             });
 
+            // Handle user closing the window without completing sign-in
             authWindow.on('closed', () => {
-                server.close();
+                try {
+                    server.close();
+                } catch (e) { }
+
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ success: false, error: 'Sign-in cancelled', cancelled: true });
+                }
             });
         });
     } catch (error) {

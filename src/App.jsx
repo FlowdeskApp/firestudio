@@ -132,6 +132,13 @@ function App() {
         addLog('info', 'Starting Google Sign-In...');
         try {
             const result = await window.electronAPI.googleSignIn();
+
+            // Handle cancelled sign-in (user closed the window)
+            if (result.cancelled) {
+                setLoading(false);
+                return;
+            }
+
             if (result.success) {
                 // Load user's Firebase projects
                 const projectsResult = await window.electronAPI.getUserProjects();
