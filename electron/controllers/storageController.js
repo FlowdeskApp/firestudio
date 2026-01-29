@@ -11,7 +11,52 @@ const googleController = require('./googleController');
 
 let adminRef = null;
 
+// Cache for resolved bucket names per project
+const bucketNameCache = {};
+
 function setAdminRef(admin) { adminRef = admin; }
+
+/**
+ * Get the default storage bucket name for a Firebase project.
+ * Firebase can use different bucket naming conventions:
+ * - Older projects: {projectId}.appspot.com
+ * - Newer projects: {projectId}.firebasestorage.app
+ * - Custom domains: Could be anything
+ */
+async function getStorageBucketName(projectId, accessToken) {
+    // Check cache first
+    if (bucketNameCache[projectId]) {
+        return bucketNameCache[projectId];
+    }
+
+    // Try different bucket name patterns
+    const bucketPatterns = [
+        `${projectId}.appspot.com`,
+        `${projectId}.firebasestorage.app`,
+    ];
+
+    for (const bucketName of bucketPatterns) {
+        try {
+            const url = `https://storage.googleapis.com/storage/v1/b/${bucketName}`;
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const data = await response.json();
+
+            // If no error, bucket exists
+            if (!data.error) {
+                console.log(`[Storage] Found bucket: ${bucketName}`);
+                bucketNameCache[projectId] = bucketName;
+                return bucketName;
+            }
+        } catch (e) {
+            // Continue trying other patterns
+        }
+    }
+
+    // Default to appspot.com if nothing found (will show proper error to user)
+    return `${projectId}.appspot.com`;
+}
 
 function getProjectId() {
     if (adminRef?.apps?.length > 0) {
@@ -118,17 +163,23 @@ function registerHandlers() {
         try {
             const accessToken = googleController.getAccessToken();
             if (!accessToken) return { success: false, error: 'Not signed in' };
-            const bucketName = `${projectId}.appspot.com`;
+            const bucketName = await getStorageBucketName(projectId, accessToken);
             const prefix = storagePath ? (storagePath.endsWith('/') ? storagePath : storagePath + '/') : '';
             const url = `https://storage.googleapis.com/storage/v1/b/${bucketName}/o?prefix=${encodeURIComponent(prefix)}&delimiter=/`;
             const response = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
             const data = await response.json();
-            if (data.error) return { success: false, error: data.error.message };
+            if (data.error) {
+                // Provide clearer error message for bucket not found
+                if (data.error.code === 404) {
+                    return { success: false, error: `Storage bucket not found. Make sure Firebase Storage is enabled for project "${projectId}" in the Firebase Console.` };
+                }
+                return { success: false, error: data.error.message };
+            }
             const folders = (data.prefixes || []).map(p => ({ name: p.replace(prefix, '').replace(/\/$/, ''), path: p, type: 'folder', size: 0, updated: null }));
             const files = (data.items || []).filter(f => f.name !== prefix && !f.name.endsWith('/')).map(f => ({
                 name: f.name.replace(prefix, ''), path: f.name, type: 'file', size: parseInt(f.size || 0, 10), contentType: f.contentType || 'application/octet-stream', updated: f.updated || null, generation: f.generation
             }));
-            return { success: true, items: [...folders, ...files], currentPath: storagePath };
+            return { success: true, items: [...folders, ...files], currentPath: storagePath, bucketName };
         } catch (error) { return { success: false, error: error.message }; }
     });
 
@@ -142,12 +193,17 @@ function registerHandlers() {
             const fileName = path.basename(localPath);
             const fileContent = fs.readFileSync(localPath);
             const mimeType = require('mime-types').lookup(localPath) || 'application/octet-stream';
-            const bucketName = `${projectId}.appspot.com`;
+            const bucketName = await getStorageBucketName(projectId, accessToken);
             const destination = storagePath ? `${storagePath}/${fileName}` : fileName;
             const url = `https://storage.googleapis.com/upload/storage/v1/b/${bucketName}/o?uploadType=media&name=${encodeURIComponent(destination)}`;
             const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': mimeType }, body: fileContent });
             const data = await response.json();
-            if (data.error) return { success: false, error: data.error.message };
+            if (data.error) {
+                if (data.error.code === 404) {
+                    return { success: false, error: `Storage bucket not found. Make sure Firebase Storage is enabled for project "${projectId}" in the Firebase Console.` };
+                }
+                return { success: false, error: data.error.message };
+            }
             return { success: true, fileName, path: destination };
         } catch (error) { return { success: false, error: error.message }; }
     });
@@ -158,7 +214,7 @@ function registerHandlers() {
             if (!accessToken) return { success: false, error: 'Not signed in' };
             const { filePath: savePath } = await dialog.showSaveDialog({ defaultPath: filePath.split('/').pop() });
             if (!savePath) return { success: false, error: 'No save location' };
-            const bucketName = `${projectId}.appspot.com`;
+            const bucketName = await getStorageBucketName(projectId, accessToken);
             const url = `https://storage.googleapis.com/storage/v1/b/${bucketName}/o/${encodeURIComponent(filePath)}?alt=media`;
             const response = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
             if (!response.ok) { const err = await response.json(); return { success: false, error: err.error?.message || 'Download failed' }; }
@@ -172,7 +228,7 @@ function registerHandlers() {
         try {
             const accessToken = googleController.getAccessToken();
             if (!accessToken) return { success: false, error: 'Not signed in' };
-            const bucketName = `${projectId}.appspot.com`;
+            const bucketName = await getStorageBucketName(projectId, accessToken);
             const metadataUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePath)}`;
             const metadataResponse = await fetch(metadataUrl, { headers: { 'Authorization': `Bearer ${accessToken}` } });
             const metadata = await metadataResponse.json();
@@ -188,7 +244,8 @@ function registerHandlers() {
         try {
             const accessToken = googleController.getAccessToken();
             if (!accessToken) return { success: false, error: 'Not signed in' };
-            const url = `https://storage.googleapis.com/storage/v1/b/${projectId}.appspot.com/o/${encodeURIComponent(filePath)}`;
+            const bucketName = await getStorageBucketName(projectId, accessToken);
+            const url = `https://storage.googleapis.com/storage/v1/b/${bucketName}/o/${encodeURIComponent(filePath)}`;
             const response = await fetch(url, { method: 'DELETE', headers: { 'Authorization': `Bearer ${accessToken}` } });
             if (!response.ok && response.status !== 204) { const err = await response.json(); return { success: false, error: err.error?.message || 'Delete failed' }; }
             return { success: true };
@@ -199,11 +256,17 @@ function registerHandlers() {
         try {
             const accessToken = googleController.getAccessToken();
             if (!accessToken) return { success: false, error: 'Not signed in' };
+            const bucketName = await getStorageBucketName(projectId, accessToken);
             const placeholderPath = folderPath.endsWith('/') ? folderPath + '.placeholder' : folderPath + '/.placeholder';
-            const url = `https://storage.googleapis.com/upload/storage/v1/b/${projectId}.appspot.com/o?uploadType=media&name=${encodeURIComponent(placeholderPath)}`;
+            const url = `https://storage.googleapis.com/upload/storage/v1/b/${bucketName}/o?uploadType=media&name=${encodeURIComponent(placeholderPath)}`;
             const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/x-empty' }, body: '' });
             const data = await response.json();
-            if (data.error) return { success: false, error: data.error.message };
+            if (data.error) {
+                if (data.error.code === 404) {
+                    return { success: false, error: `Storage bucket not found. Make sure Firebase Storage is enabled for project "${projectId}" in the Firebase Console.` };
+                }
+                return { success: false, error: data.error.message };
+            }
             return { success: true, folderPath };
         } catch (error) { return { success: false, error: error.message }; }
     });

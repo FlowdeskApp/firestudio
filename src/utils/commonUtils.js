@@ -3,6 +3,43 @@
  * Shared utility functions used across multiple components
  */
 
+import Swal from 'sweetalert2';
+
+/**
+ * Shows a confirmation dialog using SweetAlert2
+ * @param {string} title - Dialog title
+ * @param {string} message - Dialog message (can include HTML)
+ * @param {Object} options - Optional configuration
+ * @param {string} options.icon - Icon type: 'warning' | 'error' | 'success' | 'info' | 'question' (default: 'warning')
+ * @param {string} options.confirmText - Confirm button text (default: 'Confirm')
+ * @param {string} options.cancelText - Cancel button text (default: 'Cancel')
+ * @param {boolean} options.isDark - Dark mode flag (default: auto-detect)
+ * @returns {Promise<boolean>} - True if confirmed, false if cancelled
+ */
+export const confirmAction = async (title, message, options = {}) => {
+    const {
+        icon = 'warning',
+        confirmText = 'Confirm',
+        cancelText = 'Cancel',
+        isDark = document.body.classList.contains('dark-mode') || window.matchMedia?.('(prefers-color-scheme: dark)')?.matches
+    } = options;
+
+    const result = await Swal.fire({
+        title,
+        html: message,
+        icon,
+        showCancelButton: true,
+        confirmButtonColor: icon === 'warning' || icon === 'error' ? '#d33' : '#3085d6',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: confirmText,
+        cancelButtonText: cancelText,
+        background: isDark ? '#1e1e1e' : '#fff',
+        color: isDark ? '#fff' : '#333',
+    });
+
+    return result.isConfirmed;
+};
+
 /**
  * Copies text to clipboard
  * @param {string} text - Text to copy

@@ -38,37 +38,6 @@ Perfect for **Firebase developers**, **backend engineers**, **database administr
 
 ---
 
-## 🆕 What's New in v1.1.0
-
-### Collection Management
-- **Context Menus**: Right-click on collections for quick actions (Add Document, Rename, Delete, Export, Copy ID, etc.)
-- **Rename Collection**: Copy all documents to a new collection and delete the original
-- **Delete Collection**: Delete all documents in a collection with confirmation
-- **Add Document**: Create new documents directly from the sidebar context menu
-- **Estimate Document Count**: Quick count of documents in a collection
-- **Copy Resource Path**: Copy full Firestore resource path to clipboard
-
-### Bulk Operations
-- **Multi-Select**: Checkbox selection in Table View for multiple documents
-- **Bulk Delete**: Delete multiple documents at once with confirmation dialog
-
-### UI/UX Improvements
-- **Active Collection Highlighting**: Visual indicator showing which collection/storage/auth is currently open
-- **Middle-Click to Close Tabs**: Close tabs quickly with middle mouse button
-- **Context Menu Positioning**: Menus appear at cursor position on right-click
-- **Hover Effects**: Better visual feedback on menu buttons and items
-
-### Settings
-- **Data Type Display Settings**: Configure how timestamps, numbers, and geopoints are displayed
-  - Timestamp formats: ISO 8601, Local, UTC, Unix, Relative
-  - Number formats: Auto, Fixed Decimal, With Separators, Scientific
-  - GeoPoint formats: Decimal, DMS, Compact
-
-### Error Handling
-- **API Disabled Dialog**: User-friendly dialog when Firestore API is not enabled, with direct link to enable it
-
----
-
 ## ✨ Features
 
 ### 🔐 Multiple Authentication Methods

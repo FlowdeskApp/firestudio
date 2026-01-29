@@ -28,16 +28,23 @@ function registerHandlers() {
     });
 
     // Create user (Admin SDK)
-    ipcMain.handle('auth:createUser', async (event, { email, password, displayName, phoneNumber }) => {
+    ipcMain.handle('auth:createUser', async (event, { email, password, displayName, phoneNumber, uid, photoURL, disabled, emailVerified }) => {
         try {
             if (!adminRef?.apps?.length) throw new Error('Not connected to Firebase');
-            const userRecord = await adminRef.auth().createUser({ email, password, displayName: displayName || undefined, phoneNumber: phoneNumber || undefined });
+            const userData = { email, password };
+            if (displayName) userData.displayName = displayName;
+            if (phoneNumber) userData.phoneNumber = phoneNumber;
+            if (uid) userData.uid = uid;
+            if (photoURL) userData.photoURL = photoURL;
+            if (disabled) userData.disabled = disabled;
+            if (emailVerified) userData.emailVerified = emailVerified;
+            const userRecord = await adminRef.auth().createUser(userData);
             return { success: true, user: { uid: userRecord.uid, email: userRecord.email, displayName: userRecord.displayName } };
         } catch (error) { return { success: false, error: error.message }; }
     });
 
     // Update user (Admin SDK)
-    ipcMain.handle('auth:updateUser', async (event, { uid, email, password, displayName, phoneNumber, disabled }) => {
+    ipcMain.handle('auth:updateUser', async (event, { uid, email, password, displayName, phoneNumber, disabled, photoURL, emailVerified }) => {
         try {
             if (!adminRef?.apps?.length) throw new Error('Not connected to Firebase');
             const updateData = {};
@@ -46,6 +53,8 @@ function registerHandlers() {
             if (displayName !== undefined) updateData.displayName = displayName;
             if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
             if (disabled !== undefined) updateData.disabled = disabled;
+            if (photoURL !== undefined) updateData.photoURL = photoURL;
+            if (emailVerified !== undefined) updateData.emailVerified = emailVerified;
             const userRecord = await adminRef.auth().updateUser(uid, updateData);
             return { success: true, user: { uid: userRecord.uid, email: userRecord.email, displayName: userRecord.displayName, disabled: userRecord.disabled } };
         } catch (error) { return { success: false, error: error.message }; }

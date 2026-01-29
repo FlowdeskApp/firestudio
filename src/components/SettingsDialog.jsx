@@ -31,6 +31,8 @@ function SettingsDialog({ open, onClose }) {
     const isDark = theme.palette.mode === 'dark';
     const { settings, updateSetting, resetSettings } = useSettings();
 
+    const isSelected = (value) => settings.theme === value;
+
     const ThemeButton = ({ value, icon: Icon, label }) => (
         <Box
             onClick={() => updateSetting('theme', value)}
@@ -40,19 +42,38 @@ function SettingsDialog({ open, onClose }) {
                 alignItems: 'center',
                 p: 2,
                 border: '2px solid',
-                borderColor: settings.theme === value ? 'primary.main' : (isDark ? '#444' : '#e0e0e0'),
+                borderColor: isSelected(value)
+                    ? (isDark ? '#90caf9' : 'primary.main')
+                    : (isDark ? '#555' : '#e0e0e0'),
                 borderRadius: 2,
                 cursor: 'pointer',
                 minWidth: 80,
-                backgroundColor: isDark ? '#333' : '#fff',
+                backgroundColor: isSelected(value)
+                    ? (isDark ? 'rgba(144, 202, 249, 0.15)' : 'rgba(25, 118, 210, 0.08)')
+                    : (isDark ? '#2a2a2a' : '#fff'),
                 '&:hover': {
-                    borderColor: settings.theme === value ? 'primary.main' : (isDark ? '#555' : '#bdbdbd'),
-                    backgroundColor: isDark ? '#3d3d3d' : '#f5f5f5',
+                    borderColor: isSelected(value)
+                        ? (isDark ? '#90caf9' : 'primary.main')
+                        : (isDark ? '#777' : '#bdbdbd'),
+                    backgroundColor: isSelected(value)
+                        ? (isDark ? 'rgba(144, 202, 249, 0.2)' : 'rgba(25, 118, 210, 0.12)')
+                        : (isDark ? '#333' : '#f5f5f5'),
                 },
             }}
         >
-            <Icon sx={{ fontSize: 28, mb: 0.5, color: settings.theme === value ? 'primary.main' : (isDark ? '#aaa' : '#666') }} />
-            <Typography variant="caption" sx={{ color: settings.theme === value ? 'primary.main' : (isDark ? '#aaa' : '#666') }}>
+            <Icon sx={{
+                fontSize: 28,
+                mb: 0.5,
+                color: isSelected(value)
+                    ? (isDark ? '#90caf9' : 'primary.main')
+                    : (isDark ? '#fff' : '#666')
+            }} />
+            <Typography variant="caption" sx={{
+                color: isSelected(value)
+                    ? (isDark ? '#90caf9' : 'primary.main')
+                    : (isDark ? '#fff' : '#666'),
+                fontWeight: isSelected(value) ? 600 : 400
+            }}>
                 {label}
             </Typography>
         </Box>

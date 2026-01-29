@@ -6,7 +6,7 @@
 // Load environment variables first
 require('./utils/env');
 
-const { app, BrowserWindow, nativeTheme, ipcMain } = require('electron');
+const { app, BrowserWindow, nativeTheme, ipcMain, shell } = require('electron');
 const path = require('path');
 
 // Modules
@@ -67,6 +67,24 @@ ipcMain.handle('theme:get', () => {
         themeSource: nativeTheme.themeSource,
         shouldUseDarkColors: nativeTheme.shouldUseDarkColors
     };
+});
+
+// ============================================
+// Shell Handler - Open external URLs in default browser
+// ============================================
+
+ipcMain.handle('shell:openExternal', async (event, url) => {
+    try {
+        // Validate URL to prevent security issues
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') {
+            await shell.openExternal(url);
+            return { success: true };
+        }
+        return { success: false, error: 'Invalid URL protocol' };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
 });
 
 app.whenReady().then(() => {

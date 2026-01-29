@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box, Typography, IconButton, Tooltip, Button, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, CircularProgress, Breadcrumbs, Link,
@@ -12,9 +12,10 @@ import {
     MoreVert as MoreVertIcon, Home as HomeIcon, NavigateNext as NavigateNextIcon,
     Image as ImageIcon, VideoFile as VideoIcon, AudioFile as AudioIcon,
     Description as DocIcon, Code as CodeIcon, Archive as ArchiveIcon,
+    OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { useThemeColors } from '../hooks';
-import { formatFileSize, formatDate, copyToClipboard } from '../utils/commonUtils';
+import { formatFileSize, formatDate, copyToClipboard, confirmAction } from '../utils/commonUtils';
 
 // File icon component
 const FileTypeIcon = ({ item, mutedColor }) => {
@@ -56,15 +57,21 @@ function StorageTab({ project, addLog, showMessage }) {
     const [urlExpiration, setUrlExpiration] = useState('7d');
     const [urlLoading, setUrlLoading] = useState(false);
     const [urlFileItem, setUrlFileItem] = useState(null);
+    const [bucketError, setBucketError] = useState(null);
 
     const isGoogle = project?.authMethod === 'google';
+    const loadingRef = useRef(false);
 
     useEffect(() => {
         if (project) loadFiles();
-    }, [project, currentPath]);
+    }, [project?.projectId, currentPath]);
 
     const loadFiles = async () => {
+        // Prevent duplicate calls
+        if (loadingRef.current) return;
+        loadingRef.current = true;
         setLoading(true);
+        setBucketError(null);
         try {
             const result = isGoogle
                 ? await window.electronAPI.googleStorageListFiles({ projectId: project.projectId, path: currentPath })
@@ -72,17 +79,29 @@ function StorageTab({ project, addLog, showMessage }) {
 
             if (result.success) {
                 setItems(result.items || []);
+                setBucketError(null);
                 addLog?.('success', `Loaded ${result.items?.length || 0} items from storage`);
             } else {
-                showMessage?.(result.error, 'error');
+                // Check if this is a bucket not found error
+                if (result.error?.includes('Storage bucket not found') || result.error?.includes('does not exist')) {
+                    setBucketError(result.error);
+                } else {
+                    showMessage?.(result.error, 'error');
+                }
                 setItems([]);
             }
         } catch (error) {
             showMessage?.(error.message, 'error');
             setItems([]);
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
+    };
+
+    const openFirebaseConsole = () => {
+        const url = `https://console.firebase.google.com/project/${project.projectId}/storage`;
+        window.electronAPI.openExternal(url);
     };
 
     const navigateToBreadcrumb = (index) => {
@@ -156,17 +175,24 @@ function StorageTab({ project, addLog, showMessage }) {
 
     const handleDelete = async (item) => {
         closeMenu();
-        if (!window.confirm(`Delete "${item.name}"?`)) return;
-        try {
-            const result = isGoogle
-                ? await window.electronAPI.googleStorageDeleteFile({ projectId: project.projectId, filePath: item.path })
-                : await window.electronAPI.storageDeleteFile({ filePath: item.path });
-            if (result.success) {
-                addLog?.('success', `Deleted ${item.name}`);
-                showMessage?.(`Deleted ${item.name}`, 'success');
-                loadFiles();
-            } else showMessage?.(result.error, 'error');
-        } catch (error) { showMessage?.(error.message, 'error'); }
+        const confirmed = await confirmAction(
+            'Delete File?',
+            `Are you sure you want to delete <strong>"${item.name}"</strong>?<br><small style="color: #888;">This action cannot be undone.</small>`,
+            { confirmText: 'Delete', isDark }
+        );
+
+        if (confirmed) {
+            try {
+                const deleteResult = isGoogle
+                    ? await window.electronAPI.googleStorageDeleteFile({ projectId: project.projectId, filePath: item.path })
+                    : await window.electronAPI.storageDeleteFile({ filePath: item.path });
+                if (deleteResult.success) {
+                    addLog?.('success', `Deleted ${item.name}`);
+                    showMessage?.(`Deleted ${item.name}`, 'success');
+                    loadFiles();
+                } else showMessage?.(deleteResult.error, 'error');
+            } catch (error) { showMessage?.(error.message, 'error'); }
+        }
     };
 
     const handleCreateFolder = async () => {
@@ -216,6 +242,28 @@ function StorageTab({ project, addLog, showMessage }) {
             <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><CircularProgress /></Box>
+                ) : bucketError ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: mutedColor, p: 4 }}>
+                        <FolderIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2, color: '#f44336' }} />
+                        <Typography variant="h6" sx={{ mb: 1, color: textColor }}>Storage Not Enabled</Typography>
+                        <Typography sx={{ textAlign: 'center', maxWidth: 450, mb: 3 }}>
+                            Firebase Storage is not enabled for this project. Enable it in the Firebase Console to start uploading files.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={openFirebaseConsole}
+                            startIcon={<OpenInNewIcon />}
+                        >
+                            Open Firebase Console
+                        </Button>
+                        <Typography variant="caption" sx={{ mt: 2, color: mutedColor }}>
+                            After enabling Storage, click Refresh to reload.
+                        </Typography>
+                        <Button variant="text" size="small" onClick={loadFiles} sx={{ mt: 1 }}>
+                            <RefreshIcon sx={{ fontSize: 16, mr: 0.5 }} /> Refresh
+                        </Button>
+                    </Box>
                 ) : items.length === 0 ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: mutedColor }}>
                         <FolderIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
@@ -309,6 +357,7 @@ function StorageTab({ project, addLog, showMessage }) {
                     <Button onClick={() => setUrlDialogOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
+
         </Box>
     );
 }

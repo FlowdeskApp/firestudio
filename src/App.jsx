@@ -561,7 +561,7 @@ function App() {
     // Open Firebase Console in browser
     const handleRevealInFirebaseConsole = (project) => {
         const url = `https://console.firebase.google.com/project/${project.projectId}/firestore`;
-        window.open(url, '_blank');
+        window.electronAPI.openExternal(url);
         addLog('info', `Opened Firebase Console for ${project.projectId}`);
     };
 
@@ -969,7 +969,7 @@ function App() {
 
     const handleRevealCollectionInConsole = (project, collection) => {
         const url = `https://console.firebase.google.com/project/${project.projectId}/firestore/data/~2F${collection}`;
-        window.open(url, '_blank');
+        window.electronAPI.openExternal(url);
         addLog('info', `Opened Firebase Console for collection ${collection}`);
     };
 
@@ -981,6 +981,7 @@ function App() {
 
         // Check in Google accounts
         for (const item of projects) {
+
             if (item.type === 'googleAccount' && item.projects) {
                 const googleProject = item.projects.find(p => p.id === projectId);
                 if (googleProject) return googleProject;
@@ -1470,7 +1471,7 @@ function App() {
                     <Button
                         variant="contained"
                         onClick={() => {
-                            window.open(apiDisabledDialog.apiUrl, '_blank');
+                            window.electronAPI.openExternal(apiDisabledDialog.apiUrl);
                         }}
                     >
                         Enable Firestore API

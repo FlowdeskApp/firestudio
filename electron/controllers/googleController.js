@@ -465,6 +465,137 @@ function registerHandlers() {
             return { success: true };
         } catch (error) { return { success: false, error: error.message }; }
     });
+
+    // ============================================
+    // Firebase Authentication (Identity Toolkit API)
+    // ============================================
+
+    // List Auth Users
+    ipcMain.handle('google:listAuthUsers', async (event, { projectId, maxResults = 1000 }) => {
+        try {
+            const result = await authenticatedFetch(
+                `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:query`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        returnUserInfo: true,
+                        maxResults: maxResults
+                    })
+                }
+            );
+            if (!result.ok) return result.error;
+
+            const data = result.data;
+            if (data.error) return { success: false, error: data.error.message, requiresReauth: data.error.code === 401 };
+
+            // Transform the response to match Firebase Admin SDK format
+            const users = (data.userInfo || []).map(user => ({
+                uid: user.localId,
+                email: user.email || null,
+                emailVerified: user.emailVerified || false,
+                displayName: user.displayName || null,
+                photoURL: user.photoUrl || null,
+                phoneNumber: user.phoneNumber || null,
+                disabled: user.disabled || false,
+                metadata: {
+                    creationTime: user.createdAt ? new Date(parseInt(user.createdAt)).toISOString() : null,
+                    lastSignInTime: user.lastLoginAt ? new Date(parseInt(user.lastLoginAt)).toISOString() : null,
+                    lastRefreshTime: user.lastRefreshAt ? new Date(parseInt(user.lastRefreshAt)).toISOString() : null
+                },
+                providerData: (user.providerUserInfo || []).map(p => ({
+                    providerId: p.providerId,
+                    uid: p.rawId || p.federatedId,
+                    displayName: p.displayName,
+                    email: p.email,
+                    photoURL: p.photoUrl
+                }))
+            }));
+
+            return { success: true, users };
+        } catch (error) { return { success: false, error: error.message }; }
+    });
+
+    // Create Auth User
+    ipcMain.handle('google:createAuthUser', async (event, { projectId, email, password, displayName, uid, phoneNumber, photoURL, disabled, emailVerified }) => {
+        try {
+            const userData = {
+                email,
+                password,
+                returnSecureToken: false
+            };
+            if (displayName) userData.displayName = displayName;
+            if (uid) userData.localId = uid;
+            if (phoneNumber) userData.phoneNumber = phoneNumber;
+            if (photoURL) userData.photoUrl = photoURL;
+            if (disabled) userData.disabled = disabled;
+            if (emailVerified) userData.emailVerified = emailVerified;
+
+            const result = await authenticatedFetch(
+                `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                }
+            );
+            if (!result.ok) return result.error;
+
+            const data = result.data;
+            if (data.error) return { success: false, error: data.error.message, requiresReauth: data.error.code === 401 };
+
+            return { success: true, uid: data.localId, email: data.email };
+        } catch (error) { return { success: false, error: error.message }; }
+    });
+
+    // Delete Auth User
+    ipcMain.handle('google:deleteAuthUser', async (event, { projectId, uid }) => {
+        try {
+            const result = await authenticatedFetch(
+                `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ localId: uid })
+                }
+            );
+            if (!result.ok) return result.error;
+
+            const data = result.data;
+            if (data.error) return { success: false, error: data.error.message, requiresReauth: data.error.code === 401 };
+
+            return { success: true };
+        } catch (error) { return { success: false, error: error.message }; }
+    });
+
+    // Update Auth User (enable/disable, update email, etc.)
+    ipcMain.handle('google:updateAuthUser', async (event, { projectId, uid, disabled, email, displayName, password, phoneNumber, photoURL, emailVerified }) => {
+        try {
+            const updateData = { localId: uid };
+            if (typeof disabled === 'boolean') updateData.disableUser = disabled;
+            if (email) updateData.email = email;
+            if (displayName !== undefined) updateData.displayName = displayName;
+            if (password) updateData.password = password;
+            if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+            if (photoURL !== undefined) updateData.photoUrl = photoURL;
+            if (typeof emailVerified === 'boolean') updateData.emailVerified = emailVerified;
+
+            const result = await authenticatedFetch(
+                `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                }
+            );
+            if (!result.ok) return result.error;
+
+            const data = result.data;
+            if (data.error) return { success: false, error: data.error.message, requiresReauth: data.error.code === 401 };
+
+            return { success: true };
+        } catch (error) { return { success: false, error: error.message }; }
+    });
 }
 
 module.exports = { registerHandlers, getAccessToken, setAccessToken, getRefreshToken, setRefreshToken };

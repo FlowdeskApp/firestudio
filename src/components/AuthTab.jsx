@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Box, Typography, IconButton, Tooltip, Button, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, CircularProgress, Chip, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, Menu, MenuItem,
-    ListItemIcon, Divider, Avatar, InputAdornment,
+    ListItemIcon, Divider, Avatar, InputAdornment, FormControlLabel, Checkbox,
 } from '@mui/material';
 import {
     Refresh as RefreshIcon, Add as AddIcon, Delete as DeleteIcon,
     MoreVert as MoreVertIcon, Email as EmailIcon, Phone as PhoneIcon,
     Person as PersonIcon, Search as SearchIcon, Verified as VerifiedIcon,
     ContentCopy as CopyIcon, Block as BlockIcon, CheckCircle as EnableIcon,
+    Edit as EditIcon, OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { useThemeColors } from '../hooks';
-import { formatDate, copyToClipboard } from '../utils/commonUtils';
+import { formatDate, copyToClipboard, confirmAction } from '../utils/commonUtils';
 
 // Provider icon component
 const ProviderIcon = ({ providerId }) => {
@@ -26,7 +27,7 @@ const ProviderIcon = ({ providerId }) => {
 
 // User avatar component
 const UserAvatar = ({ user, isDark }) => (
-    <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: isDark ? '#444' : '#ccc' }}>
+    <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: isDark ? '#555' : '#ccc', color: isDark ? '#fff' : '#333' }}>
         {(user.displayName?.[0] || user.email?.[0] || '?').toUpperCase()}
     </Avatar>
 );
@@ -37,22 +38,48 @@ function AuthTab({ project, addLog, showMessage }) {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
+    const [authError, setAuthError] = useState(null);
     const [selectedUser, setSelectedUser] = useState(null);
     const [menuAnchor, setMenuAnchor] = useState(null);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
-    const [userDetailsOpen, setUserDetailsOpen] = useState(false);
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserPassword, setNewUserPassword] = useState('');
     const [newUserDisplayName, setNewUserDisplayName] = useState('');
+    const [newUserUid, setNewUserUid] = useState('');
+    const [newUserPhoneNumber, setNewUserPhoneNumber] = useState('');
+    const [newUserPhotoUrl, setNewUserPhotoUrl] = useState('');
+    const [newUserDisabled, setNewUserDisabled] = useState(false);
+    const [newUserEmailVerified, setNewUserEmailVerified] = useState(false);
+
+    // Edit user dialog state
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editUser, setEditUser] = useState(null);
+    const [editEmail, setEditEmail] = useState('');
+    const [editDisplayName, setEditDisplayName] = useState('');
+    const [editPhoneNumber, setEditPhoneNumber] = useState('');
+    const [editPhotoUrl, setEditPhotoUrl] = useState('');
+    const [editPassword, setEditPassword] = useState('');
+    const [editDisabled, setEditDisabled] = useState(false);
+    const [editEmailVerified, setEditEmailVerified] = useState(false);
 
     const isGoogle = project?.authMethod === 'google';
+    const loadingRef = useRef(false);
 
     useEffect(() => {
         if (project) loadUsers();
-    }, [project]);
+    }, [project?.projectId]);
+
+    const openFirebaseConsole = () => {
+        const url = `https://console.firebase.google.com/project/${project.projectId}/authentication/users`;
+        window.electronAPI.openExternal(url);
+    };
 
     const loadUsers = async () => {
+        // Prevent duplicate calls
+        if (loadingRef.current) return;
+        loadingRef.current = true;
         setLoading(true);
+        setAuthError(null);
         try {
             const result = isGoogle
                 ? await window.electronAPI.googleListAuthUsers({ projectId: project.projectId, maxResults: 1000 })
@@ -60,17 +87,35 @@ function AuthTab({ project, addLog, showMessage }) {
 
             if (result.success) {
                 setUsers(result.users || []);
+                setAuthError(null);
                 addLog?.('success', `Loaded ${result.users?.length || 0} users`);
             } else {
-                showMessage?.(result.error, 'error');
+                // Check if this is a CONFIGURATION_NOT_FOUND error (Auth not enabled)
+                if (result.error?.includes('CONFIGURATION_NOT_FOUND') || result.error?.includes('not enabled') || result.error?.includes('not been used')) {
+                    setAuthError(result.error);
+                } else {
+                    showMessage?.(result.error, 'error');
+                }
                 setUsers([]);
             }
         } catch (error) {
             showMessage?.(error.message, 'error');
             setUsers([]);
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
+    };
+
+    const resetCreateUserForm = () => {
+        setNewUserEmail('');
+        setNewUserPassword('');
+        setNewUserDisplayName('');
+        setNewUserUid('');
+        setNewUserPhoneNumber('');
+        setNewUserPhotoUrl('');
+        setNewUserDisabled(false);
+        setNewUserEmailVerified(false);
     };
 
     const handleCreateUser = async () => {
@@ -79,16 +124,25 @@ function AuthTab({ project, addLog, showMessage }) {
             return;
         }
         try {
+            const userData = {
+                email: newUserEmail,
+                password: newUserPassword,
+                displayName: newUserDisplayName || null,
+                uid: newUserUid || null,
+                phoneNumber: newUserPhoneNumber || null,
+                photoURL: newUserPhotoUrl || null,
+                disabled: newUserDisabled,
+                emailVerified: newUserEmailVerified
+            };
+
             const result = isGoogle
-                ? await window.electronAPI.googleCreateAuthUser({ projectId: project.projectId, email: newUserEmail, password: newUserPassword, displayName: newUserDisplayName || null })
-                : await window.electronAPI.createAuthUser({ email: newUserEmail, password: newUserPassword, displayName: newUserDisplayName || null });
+                ? await window.electronAPI.googleCreateAuthUser({ projectId: project.projectId, ...userData })
+                : await window.electronAPI.createAuthUser(userData);
             if (result.success) {
                 addLog?.('success', `Created user ${newUserEmail}`);
                 showMessage?.(`Created user ${newUserEmail}`, 'success');
                 setCreateDialogOpen(false);
-                setNewUserEmail('');
-                setNewUserPassword('');
-                setNewUserDisplayName('');
+                resetCreateUserForm();
                 loadUsers();
             } else showMessage?.(result.error, 'error');
         } catch (error) { showMessage?.(error.message, 'error'); }
@@ -96,17 +150,24 @@ function AuthTab({ project, addLog, showMessage }) {
 
     const handleDeleteUser = async (user) => {
         closeMenu();
-        if (!window.confirm(`Delete user "${user.email || user.uid}"?`)) return;
-        try {
-            const result = isGoogle
-                ? await window.electronAPI.googleDeleteAuthUser({ projectId: project.projectId, uid: user.uid })
-                : await window.electronAPI.deleteAuthUser({ uid: user.uid });
-            if (result.success) {
-                addLog?.('success', `Deleted user ${user.email || user.uid}`);
-                showMessage?.(`Deleted user ${user.email || user.uid}`, 'success');
-                loadUsers();
-            } else showMessage?.(result.error, 'error');
-        } catch (error) { showMessage?.(error.message, 'error'); }
+        const confirmed = await confirmAction(
+            'Delete User?',
+            `Are you sure you want to delete <strong>"${user.email || user.uid}"</strong>?<br><small style="color: #888;">This will permanently delete the user account.</small>`,
+            { confirmText: 'Delete', isDark }
+        );
+
+        if (confirmed) {
+            try {
+                const deleteResult = isGoogle
+                    ? await window.electronAPI.googleDeleteAuthUser({ projectId: project.projectId, uid: user.uid })
+                    : await window.electronAPI.deleteAuthUser({ uid: user.uid });
+                if (deleteResult.success) {
+                    addLog?.('success', `Deleted user ${user.email || user.uid}`);
+                    showMessage?.(`Deleted user ${user.email || user.uid}`, 'success');
+                    loadUsers();
+                } else showMessage?.(deleteResult.error, 'error');
+            } catch (error) { showMessage?.(error.message, 'error'); }
+        }
     };
 
     const handleDisableUser = async (user) => {
@@ -126,30 +187,70 @@ function AuthTab({ project, addLog, showMessage }) {
 
     const handleContextMenu = (e, user) => { e.preventDefault(); e.stopPropagation(); setSelectedUser(user); setMenuAnchor(e.currentTarget); };
     const closeMenu = () => setMenuAnchor(null);
-    const handleViewDetails = (user) => { closeMenu(); setSelectedUser(user); setUserDetailsOpen(true); };
     const handleCopy = (text) => copyToClipboard(text, () => showMessage?.('Copied to clipboard', 'info'));
+
+    // Edit user functions
+    const openEditDialog = (user) => {
+        closeMenu();
+        setEditUser(user);
+        setEditEmail(user.email || '');
+        setEditDisplayName(user.displayName || '');
+        setEditPhoneNumber(user.phoneNumber || '');
+        setEditPhotoUrl(user.photoURL || '');
+        setEditPassword('');
+        setEditDisabled(user.disabled || false);
+        setEditEmailVerified(user.emailVerified || false);
+        setEditDialogOpen(true);
+    };
+
+    const resetEditForm = () => {
+        setEditUser(null);
+        setEditEmail('');
+        setEditDisplayName('');
+        setEditPhoneNumber('');
+        setEditPhotoUrl('');
+        setEditPassword('');
+        setEditDisabled(false);
+        setEditEmailVerified(false);
+    };
+
+    const handleUpdateUser = async () => {
+        if (!editUser) return;
+        try {
+            const updateData = {
+                uid: editUser.uid,
+                email: editEmail !== editUser.email ? editEmail : undefined,
+                displayName: editDisplayName !== editUser.displayName ? editDisplayName : undefined,
+                phoneNumber: editPhoneNumber !== editUser.phoneNumber ? editPhoneNumber || null : undefined,
+                photoURL: editPhotoUrl !== editUser.photoURL ? editPhotoUrl || null : undefined,
+                disabled: editDisabled !== editUser.disabled ? editDisabled : undefined,
+                emailVerified: editEmailVerified !== editUser.emailVerified ? editEmailVerified : undefined,
+            };
+            // Only include password if it was changed
+            if (editPassword) updateData.password = editPassword;
+
+            // Remove undefined values
+            Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+            const result = isGoogle
+                ? await window.electronAPI.googleUpdateAuthUser({ projectId: project.projectId, ...updateData })
+                : await window.electronAPI.updateAuthUser(updateData);
+
+            if (result.success) {
+                addLog?.('success', `Updated user ${editUser.email || editUser.uid}`);
+                showMessage?.(`User updated successfully`, 'success');
+                setEditDialogOpen(false);
+                resetEditForm();
+                loadUsers();
+            } else showMessage?.(result.error, 'error');
+        } catch (error) { showMessage?.(error.message, 'error'); }
+    };
 
     const filteredUsers = users.filter(user => {
         if (!searchText) return true;
         const s = searchText.toLowerCase();
         return (user.email?.toLowerCase().includes(s) || user.displayName?.toLowerCase().includes(s) || user.uid?.toLowerCase().includes(s) || user.phoneNumber?.includes(s));
     });
-
-    // Google OAuth cannot access Auth - show message
-    if (isGoogle) {
-        return (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: mutedColor, backgroundColor: bgColor, p: 4 }}>
-                <PersonIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
-                <Typography variant="h6" sx={{ mb: 2, color: textColor }}>Authentication Requires Service Account</Typography>
-                <Typography sx={{ textAlign: 'center', maxWidth: 500 }}>Firebase Authentication user management requires a Service Account with admin privileges.</Typography>
-                <Typography variant="body2" sx={{ mt: 2, textAlign: 'center', maxWidth: 500 }}>Google OAuth does not have sufficient permissions to list or manage Firebase Auth users.</Typography>
-                <Box sx={{ mt: 3, p: 2, backgroundColor: cardBg, borderRadius: 1, maxWidth: 500 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, color: textColor }}>To use Authentication:</Typography>
-                    <Typography variant="body2" sx={{ color: mutedColor }}>1. Go to Firebase Console → Project Settings → Service Accounts<br />2. Click "Generate new private key"<br />3. Add the project using "Service Account" option in Firestudio</Typography>
-                </Box>
-            </Box>
-        );
-    }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: bgColor }}>
@@ -168,6 +269,28 @@ function AuthTab({ project, addLog, showMessage }) {
             <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><CircularProgress /></Box>
+                ) : authError ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: mutedColor, p: 4 }}>
+                        <PersonIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2, color: '#f44336' }} />
+                        <Typography variant="h6" sx={{ mb: 1, color: textColor }}>Authentication Not Enabled</Typography>
+                        <Typography sx={{ textAlign: 'center', maxWidth: 450, mb: 3 }}>
+                            Firebase Authentication is not enabled for this project. Enable it in the Firebase Console to manage users.
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={openFirebaseConsole}
+                            startIcon={<OpenInNewIcon />}
+                        >
+                            Open Firebase Console
+                        </Button>
+                        <Typography variant="caption" sx={{ mt: 2, color: mutedColor }}>
+                            After enabling Authentication, click Refresh to reload.
+                        </Typography>
+                        <Button variant="text" size="small" onClick={loadUsers} sx={{ mt: 1 }}>
+                            <RefreshIcon sx={{ fontSize: 16, mr: 0.5 }} /> Refresh
+                        </Button>
+                    </Box>
                 ) : filteredUsers.length === 0 ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: mutedColor }}>
                         <PersonIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
@@ -191,7 +314,7 @@ function AuthTab({ project, addLog, showMessage }) {
                             </TableHead>
                             <TableBody>
                                 {filteredUsers.map((user) => (
-                                    <TableRow key={user.uid} onClick={() => handleViewDetails(user)}
+                                    <TableRow key={user.uid} onClick={() => openEditDialog(user)}
                                         sx={{ cursor: 'pointer', '&:hover': { backgroundColor: hoverBg }, backgroundColor: selectedUser?.uid === user.uid ? selectedBg : 'transparent', opacity: user.disabled ? 0.5 : 1 }}>
                                         <TableCell sx={{ borderBottom: `1px solid ${borderColor}` }}><UserAvatar user={user} isDark={isDark} /></TableCell>
                                         <TableCell sx={{ borderBottom: `1px solid ${borderColor}` }}>
@@ -203,7 +326,7 @@ function AuthTab({ project, addLog, showMessage }) {
                                         </TableCell>
                                         <TableCell sx={{ fontSize: '0.85rem', color: textColor, borderBottom: `1px solid ${borderColor}` }}>{user.displayName || '—'}</TableCell>
                                         <TableCell sx={{ borderBottom: `1px solid ${borderColor}` }}>
-                                            <Box sx={{ display: 'flex', gap: 0.5 }}>{(user.providerData || []).map((p, i) => <Tooltip key={i} title={p.providerId}><ProviderIcon providerId={p.providerId} /></Tooltip>)}</Box>
+                                            <Box sx={{ display: 'flex', gap: 0.5 }}>{(user.providerData || []).map((p, i) => <Tooltip key={i} title={p.providerId}><span><ProviderIcon providerId={p.providerId} /></span></Tooltip>)}</Box>
                                         </TableCell>
                                         <TableCell sx={{ borderBottom: `1px solid ${borderColor}` }}>
                                             {user.disabled ? <Chip label="Disabled" size="small" color="error" sx={{ fontSize: '0.7rem', height: 20 }} /> : <Chip label="Active" size="small" color="success" sx={{ fontSize: '0.7rem', height: 20 }} />}
@@ -226,7 +349,7 @@ function AuthTab({ project, addLog, showMessage }) {
 
             {/* Context Menu */}
             <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-                <MenuItem onClick={() => handleViewDetails(selectedUser)}><ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>View Details</MenuItem>
+                <MenuItem onClick={() => openEditDialog(selectedUser)}><ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>View / Edit User</MenuItem>
                 <MenuItem onClick={() => { handleCopy(selectedUser?.uid); closeMenu(); }}><ListItemIcon><CopyIcon fontSize="small" /></ListItemIcon>Copy UID</MenuItem>
                 <Divider />
                 <MenuItem onClick={() => handleDisableUser(selectedUser)}><ListItemIcon>{selectedUser?.disabled ? <EnableIcon fontSize="small" /> : <BlockIcon fontSize="small" />}</ListItemIcon>{selectedUser?.disabled ? 'Enable User' : 'Disable User'}</MenuItem>
@@ -234,50 +357,205 @@ function AuthTab({ project, addLog, showMessage }) {
             </Menu>
 
             {/* Create User Dialog */}
-            <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="xs" fullWidth>
+            <Dialog open={createDialogOpen} onClose={() => { setCreateDialogOpen(false); resetCreateUserForm(); }} maxWidth="sm" fullWidth>
                 <DialogTitle>Create User</DialogTitle>
                 <DialogContent>
-                    <TextField autoFocus fullWidth label="Email" type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} size="small" sx={{ mt: 1, mb: 2 }} />
-                    <TextField fullWidth label="Password" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} size="small" sx={{ mb: 2 }} />
-                    <TextField fullWidth label="Display Name (optional)" value={newUserDisplayName} onChange={(e) => setNewUserDisplayName(e.target.value)} size="small" />
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+                        <TextField
+                            autoFocus
+                            fullWidth
+                            label="Email *"
+                            type="email"
+                            value={newUserEmail}
+                            onChange={(e) => setNewUserEmail(e.target.value)}
+                            size="small"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Password *"
+                            type="password"
+                            value={newUserPassword}
+                            onChange={(e) => setNewUserPassword(e.target.value)}
+                            size="small"
+                        />
+                        <TextField
+                            fullWidth
+                            label="User UID (optional)"
+                            value={newUserUid}
+                            onChange={(e) => setNewUserUid(e.target.value)}
+                            size="small"
+                            placeholder="Auto-generated if empty"
+                            helperText="Custom UID or leave empty"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Display Name"
+                            value={newUserDisplayName}
+                            onChange={(e) => setNewUserDisplayName(e.target.value)}
+                            size="small"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Phone Number"
+                            value={newUserPhoneNumber}
+                            onChange={(e) => setNewUserPhoneNumber(e.target.value)}
+                            size="small"
+                            placeholder="+1234567890"
+                            helperText="E.164 format (e.g., +12345678900)"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Photo URL"
+                            value={newUserPhotoUrl}
+                            onChange={(e) => setNewUserPhotoUrl(e.target.value)}
+                            size="small"
+                            placeholder="https://..."
+                        />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={newUserEmailVerified}
+                                    onChange={(e) => setNewUserEmailVerified(e.target.checked)}
+                                    size="small"
+                                />
+                            }
+                            label="Email Verified"
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={newUserDisabled}
+                                    onChange={(e) => setNewUserDisabled(e.target.checked)}
+                                    size="small"
+                                />
+                            }
+                            label="Disabled"
+                        />
+                    </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-                    <Button variant="contained" onClick={handleCreateUser}>Create</Button>
+                    <Button onClick={() => { setCreateDialogOpen(false); resetCreateUserForm(); }} sx={{ color: isDark ? '#fff' : undefined }}>Cancel</Button>
+                    <Button variant="contained" onClick={handleCreateUser} disabled={!newUserEmail || !newUserPassword}>Create</Button>
                 </DialogActions>
             </Dialog>
 
-            {/* User Details Dialog */}
-            <Dialog open={userDetailsOpen} onClose={() => setUserDetailsOpen(false)} maxWidth="sm" fullWidth>
+            {/* Edit User Dialog */}
+            <Dialog open={editDialogOpen} onClose={() => { setEditDialogOpen(false); resetEditForm(); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ bgcolor: isDark ? '#444' : '#ccc' }}>{(selectedUser?.displayName?.[0] || selectedUser?.email?.[0] || '?').toUpperCase()}</Avatar>
-                        <Box>
-                            <Typography variant="h6">{selectedUser?.displayName || selectedUser?.email || 'User'}</Typography>
-                            <Typography variant="caption" sx={{ color: mutedColor }}>{selectedUser?.uid}</Typography>
+                        <Avatar sx={{ bgcolor: isDark ? '#555' : '#ccc', color: isDark ? '#fff' : '#333' }}>{(editUser?.displayName?.[0] || editUser?.email?.[0] || '?').toUpperCase()}</Avatar>
+                        <Box sx={{ flex: 1 }}>
+                            <Typography variant="h6">{editUser?.displayName || editUser?.email || 'User'}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="caption" sx={{ color: mutedColor, fontFamily: 'monospace' }}>{editUser?.uid}</Typography>
+                                <IconButton size="small" onClick={() => handleCopy(editUser?.uid)}><CopyIcon sx={{ fontSize: 12 }} /></IconButton>
+                            </Box>
                         </Box>
                     </Box>
                 </DialogTitle>
-                <DialogContent dividers>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 1, fontSize: '0.9rem' }}>
-                        <Typography color="text.secondary">Email:</Typography><Typography>{selectedUser?.email || '—'}</Typography>
-                        <Typography color="text.secondary">Email Verified:</Typography><Typography>{selectedUser?.emailVerified ? 'Yes' : 'No'}</Typography>
-                        <Typography color="text.secondary">Phone:</Typography><Typography>{selectedUser?.phoneNumber || '—'}</Typography>
-                        <Typography color="text.secondary">Display Name:</Typography><Typography>{selectedUser?.displayName || '—'}</Typography>
-                        <Typography color="text.secondary">Photo URL:</Typography><Typography sx={{ wordBreak: 'break-all' }}>{selectedUser?.photoURL || '—'}</Typography>
-                        <Typography color="text.secondary">Status:</Typography><Typography>{selectedUser?.disabled ? 'Disabled' : 'Active'}</Typography>
-                        <Typography color="text.secondary">Providers:</Typography><Box>{(selectedUser?.providerData || []).map((p, i) => <Chip key={i} label={p.providerId} size="small" sx={{ mr: 0.5, mb: 0.5 }} />)}</Box>
-                        <Typography color="text.secondary">Created:</Typography><Typography>{formatDate(selectedUser?.metadata?.creationTime)}</Typography>
-                        <Typography color="text.secondary">Last Sign In:</Typography><Typography>{formatDate(selectedUser?.metadata?.lastSignInTime)}</Typography>
-                        <Typography color="text.secondary">UID:</Typography>
+                <DialogContent>
+                    {/* User Metadata Info */}
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{selectedUser?.uid}</Typography>
-                            <IconButton size="small" onClick={() => handleCopy(selectedUser?.uid)}><CopyIcon sx={{ fontSize: 14 }} /></IconButton>
+                            <Typography variant="caption" sx={{ color: mutedColor }}>Created:</Typography>
+                            <Typography variant="caption">{formatDate(editUser?.metadata?.creationTime)}</Typography>
                         </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="caption" sx={{ color: mutedColor }}>Last Sign In:</Typography>
+                            <Typography variant="caption">{formatDate(editUser?.metadata?.lastSignInTime)}</Typography>
+                        </Box>
+                        {editUser?.providerData?.length > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="caption" sx={{ color: mutedColor }}>Providers:</Typography>
+                                {editUser.providerData.map((p, i) => <Chip key={i} label={p.providerId} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />)}
+                            </Box>
+                        )}
+                    </Box>
+
+                    <Divider sx={{ mb: 2 }} />
+
+                    {/* Edit Fields */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                        <TextField
+                            fullWidth
+                            label="Email"
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            size="small"
+                        />
+                        <TextField
+                            fullWidth
+                            label="New Password"
+                            type="password"
+                            value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value)}
+                            size="small"
+                            placeholder="Leave empty to keep current"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Display Name"
+                            value={editDisplayName}
+                            onChange={(e) => setEditDisplayName(e.target.value)}
+                            size="small"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Phone Number"
+                            value={editPhoneNumber}
+                            onChange={(e) => setEditPhoneNumber(e.target.value)}
+                            size="small"
+                            placeholder="+1234567890"
+                        />
+                        <TextField
+                            fullWidth
+                            label="Photo URL"
+                            value={editPhotoUrl}
+                            onChange={(e) => setEditPhotoUrl(e.target.value)}
+                            size="small"
+                            placeholder="https://..."
+                            sx={{ gridColumn: 'span 2' }}
+                        />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={editEmailVerified}
+                                    onChange={(e) => setEditEmailVerified(e.target.checked)}
+                                    size="small"
+                                />
+                            }
+                            label="Email Verified"
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={editDisabled}
+                                    onChange={(e) => setEditDisabled(e.target.checked)}
+                                    size="small"
+                                />
+                            }
+                            label="Disabled"
+                        />
+                    </Box>
+
+                    {/* Warning */}
+                    <Box sx={{ mt: 2, p: 1.5, backgroundColor: isDark ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 152, 0, 0.08)', borderRadius: 1, border: '1px solid rgba(255, 152, 0, 0.3)' }}>
+                        <Typography variant="caption" sx={{ color: '#ff9800' }}>
+                            ⚠️ Changing phone number, email, or password might log the user out of your app and will not send an automated SMS or email.
+                        </Typography>
                     </Box>
                 </DialogContent>
-                <DialogActions><Button onClick={() => setUserDetailsOpen(false)}>Close</Button></DialogActions>
+                <DialogActions>
+                    <Button onClick={() => { setEditDialogOpen(false); resetEditForm(); }} sx={{ color: isDark ? '#fff' : undefined }}>Cancel</Button>
+                    <Button variant="contained" onClick={handleUpdateUser}>Save Changes</Button>
+                </DialogActions>
             </Dialog>
+
         </Box>
     );
 }

@@ -91,5 +91,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Theme
     setNativeTheme: (theme) => ipcRenderer.invoke('theme:set', theme),
-    getNativeTheme: () => ipcRenderer.invoke('theme:get')
+    getNativeTheme: () => ipcRenderer.invoke('theme:get'),
+
+    // Shell - open external URLs in default browser
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
 });
