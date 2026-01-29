@@ -133,6 +133,32 @@ async function run() {
 
 ### Installation
 
+#### Download Pre-built App (Recommended)
+Download the latest release for your platform from [GitHub Releases](https://github.com/FlowdeskApp/firestudio/releases).
+
+| Platform | Download |
+|----------|----------|
+| Windows | `.exe` installer or portable |
+| macOS | `.dmg` (Intel & Apple Silicon) |
+| Linux | `.AppImage`, `.deb`, or `.tar.gz` |
+
+#### macOS Users: First Launch
+
+Since the app is not signed with an Apple Developer certificate, macOS will show a security warning on first launch.
+
+**To open the app:**
+1. Try to open the app (it will show a warning)
+2. Go to **System Settings** → **Privacy & Security**
+3. Scroll down to see "Firestudio was blocked..."
+4. Click **"Open Anyway"**
+
+Or run in Terminal:
+```bash
+xattr -cr /Applications/Firestudio.app
+```
+
+#### Build from Source
+
 ```bash
 # Clone the repository
 git clone https://github.com/flowdeskApp/firestudio.git

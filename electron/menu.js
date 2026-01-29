@@ -3,10 +3,10 @@
  * Creates and manages the application menu bar
  */
 
-const { BrowserWindow, Menu, dialog, shell } = require('electron');
+const { BrowserWindow, Menu, dialog, shell, app } = require('electron');
 
-// App Configuration
-const APP_VERSION = '1.0.0';
+// App Configuration - get version from package.json
+const APP_VERSION = app.getVersion();
 const APP_NAME = 'Firestudio';
 const COMPANY_NAME = 'Flowdesk';
 const SUPPORT_EMAIL = 'contact@flowdesk.tech';
