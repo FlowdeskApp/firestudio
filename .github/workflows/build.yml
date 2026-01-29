@@ -26,19 +26,12 @@ jobs:
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" > .env
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
 
-      # Windows Code Signing (optional - requires certificate)
-      - name: Decode Windows Certificate
-        if: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
-        run: |
-          echo "${{ secrets.WINDOWS_CERTIFICATE }}" | base64 -d > certificate.pfx
-        shell: bash
-
       - name: Build Windows
         run: npm run build:win
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          # Windows code signing environment variables
-          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE != '' && 'certificate.pfx' || '' }}
+          # Windows code signing (optional - set these secrets if you have a certificate)
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
 
       - name: Upload Windows artifacts
@@ -69,22 +62,14 @@ jobs:
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" > .env
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
 
-      # macOS Code Signing & Notarization (optional - requires Apple Developer account)
-      - name: Import macOS Certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
-        uses: apple-actions/import-codesign-certs@v2
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-
       - name: Build macOS
         run: npm run build:mac
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          # macOS code signing
+          # macOS code signing (optional - set these secrets if you have Apple Developer account)
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          # macOS notarization (requires Apple Developer account)
+          # macOS notarization (optional)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -161,4 +146,4 @@ jobs:
             artifacts/mac-builds/*
             artifacts/linux-builds/*
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
