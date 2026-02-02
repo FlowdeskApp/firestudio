@@ -42,6 +42,12 @@ function TableView({
     const [boolMenuData, setBoolMenuData] = useState({ docId: '', field: '', value: false });
     const [boolPopoverShown, setBoolPopoverShown] = useState(false);
     const boolAnchorRef = useRef(null);
+
+    // Date picker state
+    const [dateMenuAnchor, setDateMenuAnchor] = useState(null);
+    const [dateMenuData, setDateMenuData] = useState({ docId: '', field: '', value: '', originalValue: null });
+    const [tempDateValue, setTempDateValue] = useState('');
+
     const isDark = theme.palette.mode === 'dark';
 
     // Use custom table colors from theme, or fallback
@@ -193,11 +199,12 @@ function TableView({
         document.body.style.userSelect = 'none';
     };
 
-    // Reset boolean menu state when editing cell changes
+    // Reset boolean and date menu state when editing cell changes
     useEffect(() => {
         if (!editingCell) {
             setBoolMenuAnchor(null);
             setBoolPopoverShown(false);
+            setDateMenuAnchor(null);
         }
     }, [editingCell]);
 
@@ -479,42 +486,61 @@ function TableView({
                                                     {editValue} ▾
                                                 </Box>
                                             ) : (isFirestoreTimestamp(value) || isUnixTimestampMs(value) || isIsoDateString(value) || type === 'Timestamp') ? (
-                                                // Timestamp/Date: show datetime-local picker
-                                                <input
-                                                    type="datetime-local"
-                                                    step="1"
-                                                    value={(() => {
-                                                        // Convert ISO string or timestamp to datetime-local format
-                                                        try {
-                                                            const date = new Date(editValue);
-                                                            if (!isNaN(date.getTime())) {
-                                                                // Include seconds: YYYY-MM-DDTHH:MM:SS
-                                                                return date.toISOString().slice(0, 19);
+                                                // Timestamp/Date: show popover trigger
+                                                <Box
+                                                    id={`date-anchor-${doc.id}-${f}`}
+                                                    ref={(el) => {
+                                                        // Set anchor when element mounts and no anchor exists
+                                                        if (el && !dateMenuAnchor) {
+                                                            setDateMenuAnchor(el);
+
+                                                            // Convert value to datetime-local format based on type
+                                                            let dateValue;
+                                                            if (isFirestoreTimestamp(value)) {
+                                                                const seconds = value._seconds ?? value.seconds;
+                                                                dateValue = new Date(seconds * 1000);
+                                                            } else if (isUnixTimestampMs(value)) {
+                                                                dateValue = new Date(value);
+                                                            } else if (isIsoDateString(value) || typeof value === 'string') {
+                                                                dateValue = new Date(value);
+                                                            } else {
+                                                                dateValue = new Date(editValue);
                                                             }
-                                                        } catch { }
-                                                        return editValue;
-                                                    })()}
-                                                    onChange={(e) => {
-                                                        // Convert back to ISO string
-                                                        const date = new Date(e.target.value);
-                                                        setEditValue(date.toISOString());
+
+                                                            if (!isNaN(dateValue.getTime())) {
+                                                                setTempDateValue(dateValue.toISOString().slice(0, 19));
+                                                            }
+
+                                                            setDateMenuData({ docId: doc.id, field: f, value: editValue, originalValue: value });
+                                                        }
                                                     }}
-                                                    onBlur={onCellSave}
-                                                    onKeyDown={onCellKeyDown}
-                                                    autoFocus
-                                                    style={{
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
                                                         width: '100%',
-                                                        border: 'none',
-                                                        outline: 'none',
-                                                        padding: 0,
-                                                        margin: 0,
                                                         fontSize: '0.75rem',
                                                         fontFamily: '"Cascadia Code", "Fira Code", Consolas, monospace',
-                                                        backgroundColor: 'transparent',
-                                                        color: theme.palette.text.primary,
-                                                        colorScheme: isDark ? 'dark' : 'light',
+                                                        color: theme.palette.primary.main,
                                                     }}
-                                                />
+                                                >
+                                                    {(() => {
+                                                        let dateValue;
+                                                        if (isFirestoreTimestamp(value)) {
+                                                            const seconds = value._seconds ?? value.seconds;
+                                                            dateValue = new Date(seconds * 1000);
+                                                        } else if (isUnixTimestampMs(value)) {
+                                                            dateValue = new Date(value);
+                                                        } else {
+                                                            dateValue = new Date(editValue);
+                                                        }
+
+                                                        if (!isNaN(dateValue.getTime())) {
+                                                            return dateValue.toLocaleString();
+                                                        }
+                                                        return editValue;
+                                                    })()} 📅
+                                                </Box>
                                             ) : (
                                                 // Default: text input
                                                 <input
@@ -638,6 +664,8 @@ function TableView({
                 anchorEl={boolMenuAnchor}
                 onClose={() => {
                     setBoolMenuAnchor(null);
+                    // Cancel - clear editing state to restore original value
+                    onCellEdit(null, null, null);
                 }}
                 anchorOrigin={{
                     vertical: 'bottom',
@@ -723,6 +751,99 @@ function TableView({
                         }}>
                             false
                         </Typography>
+                    </Box>
+                </Box>
+            </Popover>
+
+            {/* Date Picker Popover */}
+            <Popover
+                open={Boolean(dateMenuAnchor)}
+                anchorEl={dateMenuAnchor}
+                onClose={() => {
+                    setDateMenuAnchor(null);
+                    // Cancel - clear editing state
+                    onCellEdit(null, null, null);
+                }}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            mt: 0.5,
+                            boxShadow: 3,
+                            borderRadius: 1,
+                            p: 2,
+                        }
+                    }
+                }}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'text.primary' }}>
+                        Select Date & Time
+                    </Typography>
+                    <input
+                        type="datetime-local"
+                        step="1"
+                        value={tempDateValue}
+                        onChange={(e) => setTempDateValue(e.target.value)}
+                        autoFocus
+                        style={{
+                            padding: '8px',
+                            fontSize: '0.9rem',
+                            fontFamily: '"Cascadia Code", "Fira Code", Consolas, monospace',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '4px',
+                            backgroundColor: theme.palette.background.paper,
+                            color: theme.palette.text.primary,
+                            colorScheme: isDark ? 'dark' : 'light',
+                        }}
+                    />
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                setDateMenuAnchor(null);
+                                // Cancel - clear editing state to restore original value
+                                onCellEdit(null, null, null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => {
+                                setDateMenuAnchor(null);
+                                // Convert datetime-local value back to original format
+                                const date = new Date(tempDateValue);
+                                const originalValue = dateMenuData.originalValue;
+
+                                let finalValue;
+                                if (isFirestoreTimestamp(originalValue)) {
+                                    // Save as Firestore timestamp
+                                    finalValue = {
+                                        _seconds: Math.floor(date.getTime() / 1000),
+                                        _nanoseconds: 0
+                                    };
+                                } else if (isUnixTimestampMs(originalValue)) {
+                                    // Save as unix timestamp (milliseconds)
+                                    finalValue = date.getTime();
+                                } else {
+                                    // Save as ISO string
+                                    finalValue = date.toISOString();
+                                }
+
+                                onCellSave(dateMenuData.docId, dateMenuData.field, finalValue);
+                            }}
+                        >
+                            OK
+                        </Button>
                     </Box>
                 </Box>
             </Popover>

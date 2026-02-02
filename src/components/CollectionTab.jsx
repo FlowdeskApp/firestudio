@@ -223,6 +223,13 @@ function CollectionTab({
 
     // Cell Editing Handlers
     const handleCellEdit = useCallback((docId, field, value) => {
+        // If called with null values, clear editing state (cancel operation)
+        if (docId === null || field === null) {
+            setEditingCell(null);
+            setEditValue('');
+            return;
+        }
+
         const type = getValueType(value);
         // Store original value for type preservation when saving
         setEditingCell({ docId, field, originalValue: value, originalType: type });

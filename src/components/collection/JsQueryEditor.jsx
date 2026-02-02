@@ -555,14 +555,18 @@ function JsQueryEditor({ jsQuery, setJsQuery, projectId, collectionPath, fieldNa
                         onScroll={handleScroll}
                         onKeyDown={handleKeyDown}
                         spellCheck={false}
-                        placeholder={`// Write your query here
+                        placeholder={`// JavaScript Query Editor
+// Write async queries using the Firestore Admin SDK
+// Available variables: db (Firestore instance), admin (firebase-admin)
+// Must return a QuerySnapshot or DocumentSnapshot
+
 async function run() {
-    // Use 'db' for Firestore reference
+    // Example: Query documents with filters
     const snapshot = await db
         .collection('users')
-        .where('active', '==', true)
         .limit(50)
         .get();
+    
     return snapshot;
 }`}
                         style={{
