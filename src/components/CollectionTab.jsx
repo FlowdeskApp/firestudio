@@ -224,18 +224,48 @@ function CollectionTab({
     // Cell Editing Handlers
     const handleCellEdit = useCallback((docId, field, value) => {
         const type = getValueType(value);
-        setEditingCell({ docId, field });
+        // Store original value for type preservation when saving
+        setEditingCell({ docId, field, originalValue: value, originalType: type });
         setEditValue(serializeForEdit(value, type));
     }, []);
 
-    const handleCellSave = useCallback(async () => {
-        if (!editingCell) return;
+    // Helper to detect value type for proper conversion
+    const isFirestoreTimestamp = (value) => value && typeof value === 'object' && (value._seconds !== undefined || value.seconds !== undefined);
+    const isUnixTimestampMs = (value) => typeof value === 'number' && value > 946684800000 && value < 4102444800000;
+    const isIsoDateString = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value);
 
-        const doc = documents.find(d => d.id === editingCell.docId);
+    // Save cell - can pass explicit docId, field, value for direct saving (avoids stale closure issues)
+    const handleCellSave = useCallback(async (explicitDocId, explicitField, explicitValue) => {
+        // Use explicit values if provided, otherwise use state
+        const docId = explicitDocId || editingCell?.docId;
+        const field = explicitField || editingCell?.field;
+
+        if (!docId || !field) return;
+
+        const doc = documents.find(d => d.id === docId);
         if (!doc) return;
 
-        const newValue = parseEditValue(editValue);
-        const oldValue = doc.data?.[editingCell.field];
+        const oldValue = editingCell?.originalValue ?? doc.data?.[field];
+
+        // Determine the new value - use explicit if provided, otherwise parse editValue
+        let newValue;
+        if (explicitValue !== undefined) {
+            newValue = explicitValue;
+        } else {
+            newValue = parseEditValue(editValue);
+
+            // Preserve original type for timestamps
+            if (isFirestoreTimestamp(oldValue) && typeof newValue === 'string' && isIsoDateString(newValue)) {
+                const date = new Date(newValue);
+                newValue = {
+                    _seconds: Math.floor(date.getTime() / 1000),
+                    _nanoseconds: 0
+                };
+            } else if (isUnixTimestampMs(oldValue) && typeof newValue === 'string' && isIsoDateString(newValue)) {
+                const date = new Date(newValue);
+                newValue = date.getTime();
+            }
+        }
 
         // Skip if unchanged
         if (JSON.stringify(oldValue) === JSON.stringify(newValue)) {
@@ -243,11 +273,11 @@ function CollectionTab({
             return;
         }
 
-        const newData = { ...doc.data, [editingCell.field]: newValue };
-        const result = await updateDocument(editingCell.docId, newData);
+        const newData = { ...doc.data, [field]: newValue };
+        const result = await updateDocument(docId, newData);
 
         if (result.success) {
-            addLog?.('success', `Updated ${doc.id}.${editingCell.field}`);
+            addLog?.('success', `Updated ${docId}.${field}`);
         }
 
         setEditingCell(null);
