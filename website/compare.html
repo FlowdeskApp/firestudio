@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firefoo vs Firestudio - Free Firebase GUI Alternative Comparison</title>
+    <meta name="description"
+        content="Compare Firefoo vs Firestudio - the free, open-source Firebase GUI alternative. See why developers are switching to Firestudio for managing Firestore, Storage, and Authentication.">
+    <meta name="keywords"
+        content="Firefoo alternative, Firefoo vs Firestudio, free Firebase GUI, Firebase client comparison, Firestore GUI free, Firebase desktop app">
+    <meta name="author" content="Flowdesk">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://firestudio.app/compare.html">
+    <meta property="og:title" content="Firefoo vs Firestudio - Free Firebase GUI Alternative">
+    <meta property="og:description"
+        content="Compare Firefoo vs Firestudio. Discover why Firestudio is the best free, open-source alternative for managing Firebase.">
+    <meta property="og:image" content="https://firestudio.app/images/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://firestudio.app/compare.html">
+    <meta property="twitter:title" content="Firefoo vs Firestudio - Free Firebase GUI Alternative">
+    <meta property="twitter:description"
+        content="Compare Firefoo vs Firestudio. Discover why Firestudio is the best free, open-source alternative for managing Firebase.">
+    <meta property="twitter:image" content="https://firestudio.app/images/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/icon-32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="images/icon-16.png" sizes="16x16">
+    <link rel="apple-touch-icon" href="images/icon-180.png">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://firestudio.app/compare.html">
+
+    <style>
+        :root {
+            --primary: #ff6b35;
+            --primary-dark: #e55a2b;
+            --bg-dark: #0a0a0f;
+            --bg-card: #1a1a24;
+            --text: #ffffff;
+            --text-muted: #8b8b9a;
+            --border: #2a2a3a;
+            --gradient: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            text-decoration: none;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            background: radial-gradient(ellipse at center top, rgba(255, 107, 53, 0.1) 0%, transparent 50%);
+        }
+
+        .hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 50px;
+            font-size: 0.875rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #ccc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Comparison Section */
+        .comparison {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1.25rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table th {
+            background: rgba(255, 107, 53, 0.1);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .comparison-table th:first-child {
+            width: 40%;
+        }
+
+        .comparison-table th:not(:first-child) {
+            text-align: center;
+            width: 30%;
+        }
+
+        .comparison-table td:not(:first-child) {
+            text-align: center;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .feature-name {
+            font-weight: 500;
+        }
+
+        .check {
+            color: var(--green);
+            font-size: 1.5rem;
+        }
+
+        .cross {
+            color: var(--red);
+            font-size: 1.5rem;
+        }
+
+        .highlight-cell {
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .price-tag {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .price-free {
+            color: var(--green);
+        }
+
+        .price-paid {
+            color: var(--text-muted);
+        }
+
+        /* Pros Section */
+        .pros {
+            padding: 5rem 2rem;
+            background: var(--bg-card);
+        }
+
+        .pros-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pros-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .pro-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pro-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .pro-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .pro-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+        }
+
+        .pro-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Why Switch Section */
+        .why-switch {
+            padding: 5rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .why-switch h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .reason-list {
+            list-style: none;
+        }
+
+        .reason-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .reason-list li:hover {
+            border-color: var(--primary);
+        }
+
+        .reason-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            border-radius: 50%;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .reason-content h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        .reason-content p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 5rem 2rem;
+            text-align: center;
+            background: radial-gradient(ellipse at center, rgba(255, 107, 53, 0.1) 0%, transparent 70%);
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-dark);
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-section h4 {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a {
+            color: var(--text-muted);
+        }
+
+        .footer-section a:hover {
+            color: var(--text);
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 2rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 6rem 1rem 3rem;
+            }
+
+            .comparison,
+            .pros,
+            .why-switch,
+            .cta {
+                padding: 3rem 1rem;
+            }
+
+            .comparison-table {
+                font-size: 0.9rem;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 1rem 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">🔥</span>
+                <span>Firestudio</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/#features">Features</a></li>
+                <li><a href="/#platforms">Platforms</a></li>
+                <li><a href="https://github.com/FlowdeskApp/firestudio">GitHub</a></li>
+                <li><a href="https://github.com/FlowdeskApp/firestudio/releases">Download</a></li>
+            </ul>
+            <a href="https://github.com/FlowdeskApp/firestudio/releases" class="btn btn-primary">
+                Download Free
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <span class="badge">🆚 Comparison Guide</span>
+            <h1>Firefoo vs Firestudio</h1>
+            <p class="hero-subtitle">
+                Looking for a free Firefoo alternative? Firestudio is a powerful, open-source Firebase GUI client
+                that gives you all the features you need — without the price tag.
+            </p>
+            <div class="hero-buttons">
+                <a href="https://github.com/FlowdeskApp/firestudio/releases" class="btn btn-primary">
+                    ⬇️ Try Firestudio Free
+                </a>
+                <a href="https://github.com/FlowdeskApp/firestudio" class="btn btn-secondary">
+                    ⭐ View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Table Section -->
+    <section class="comparison">
+        <h2 class="section-title">Feature Comparison</h2>
+        <p class="section-subtitle">
+            See how Firestudio stacks up against Firefoo across key features.
+        </p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>🔥 Firestudio</th>
+                    <th>Firefoo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="feature-name">💰 Price</td>
+                    <td class="highlight-cell"><span class="price-tag price-free">Free Forever</span></td>
+                    <td><span class="price-tag price-paid">$9/month</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">📖 Open Source</td>
+                    <td class="highlight-cell"><span class="check">✓</span></td>
+                    <td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">📊 Firestore Database Management</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">☁️ Firebase Storage</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">👥 Firebase Authentication</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🔍 Smart Query Editor with Autocomplete</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">📑 Multiple Views (Table, Tree, JSON)</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">📥 Import/Export JSON</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🔐 Service Account & Google OAuth</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">📂 Multiple Projects</td>
+                    <td class="highlight-cell"><span class="check">✓</span> Unlimited</td>
+                    <td>Limited in free tier</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🎨 Dark & Light Themes</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">⭐ Favorites & Saved Queries</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🪟 Windows Support</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🍎 macOS Support</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🐧 Linux Support</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🔄 Regular Updates</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">🤝 Community Contributions</td>
+                    <td class="highlight-cell"><span class="check">✓</span></td>
+                    <td><span class="cross">✗</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Pros of Firestudio Section -->
+    <section class="pros">
+        <div class="pros-container">
+            <h2 class="section-title">Why Choose Firestudio?</h2>
+            <p class="section-subtitle">
+                Here's what makes Firestudio the smart choice for Firebase developers.
+            </p>
+
+            <div class="pros-grid">
+                <div class="pro-card">
+                    <div class="pro-icon">💸</div>
+                    <h3>100% Free, Forever</h3>
+                    <p>No subscription fees, no hidden costs, no feature limitations. Firestudio is completely free to
+                        use with all features unlocked from day one.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">📖</div>
+                    <h3>Open Source & Transparent</h3>
+                    <p>Full source code available on GitHub. Know exactly what the app does, contribute improvements, or
+                        customize it for your needs.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">🔓</div>
+                    <h3>No Account Required</h3>
+                    <p>Start using Firestudio immediately. No sign-up, no email verification, no account creation. Just
+                        download and connect to your Firebase project.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">🚀</div>
+                    <h3>Unlimited Projects</h3>
+                    <p>Connect to as many Firebase projects as you need. No artificial limits on the number of projects
+                        or connections.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>Your credentials stay on your machine. Firestudio connects directly to Firebase without routing
+                        through any third-party servers.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">🤝</div>
+                    <h3>Community Driven</h3>
+                    <p>Built by developers, for developers. Request features, report bugs, or contribute code. Your
+                        voice shapes the product.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">⚡</div>
+                    <h3>Fast & Lightweight</h3>
+                    <p>Built with modern technologies for optimal performance. Quick startup times and responsive
+                        interface even with large datasets.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">🎯</div>
+                    <h3>Smart Autocomplete</h3>
+                    <p>Intelligent query editor that suggests field names, collection names, and Firestore methods as
+                        you type. Write queries faster.</p>
+                </div>
+                <div class="pro-card">
+                    <div class="pro-icon">🔄</div>
+                    <h3>Active Development</h3>
+                    <p>Regular updates with new features and improvements. Check our GitHub for the latest releases and
+                        roadmap.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Switch Section -->
+    <section class="why-switch">
+        <h2>Top Reasons to Switch from Firefoo</h2>
+
+        <ul class="reason-list">
+            <li>
+                <span class="reason-number">1</span>
+                <div class="reason-content">
+                    <h4>Save $108+ Per Year</h4>
+                    <p>Firefoo costs $9/month ($108/year). Firestudio gives you the same core functionality completely
+                        free. That's money you can invest back into your project.</p>
+                </div>
+            </li>
+            <li>
+                <span class="reason-number">2</span>
+                <div class="reason-content">
+                    <h4>No Vendor Lock-in</h4>
+                    <p>With open-source software, you're never locked into a single vendor. If Firestudio doesn't meet
+                        your needs, you can fork it and customize it yourself.</p>
+                </div>
+            </li>
+            <li>
+                <span class="reason-number">3</span>
+                <div class="reason-content">
+                    <h4>Full Feature Access from Day One</h4>
+                    <p>No tiered pricing, no premium features behind a paywall. Every feature in Firestudio is available
+                        to every user immediately.</p>
+                </div>
+            </li>
+            <li>
+                <span class="reason-number">4</span>
+                <div class="reason-content">
+                    <h4>Transparent Security</h4>
+                    <p>Review the source code yourself. Know exactly how your Firebase credentials are handled. No black
+                        boxes, no trust required.</p>
+                </div>
+            </li>
+            <li>
+                <span class="reason-number">5</span>
+                <div class="reason-content">
+                    <h4>Shape the Future</h4>
+                    <p>Open an issue on GitHub to request features. Submit pull requests to add functionality. Be part
+                        of the development process.</p>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <h2>Ready to Make the Switch?</h2>
+        <p>Join thousands of developers who have already switched to Firestudio. Download now and experience the freedom
+            of open-source Firebase management.</p>
+        <div class="hero-buttons">
+            <a href="https://github.com/FlowdeskApp/firestudio/releases" class="btn btn-primary">
+                ⬇️ Download Firestudio Free
+            </a>
+            <a href="/" class="btn btn-secondary">
+                Learn More
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-section">
+                <h4>🔥 Firestudio</h4>
+                <p style="color: var(--text-muted); font-size: 0.875rem;">
+                    Free & open-source Firebase GUI client for developers.
+                </p>
+            </div>
+            <div class="footer-section">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="/#features">Features</a></li>
+                    <li><a href="https://github.com/FlowdeskApp/firestudio/releases">Download</a></li>
+                    <li><a href="https://github.com/FlowdeskApp/firestudio">GitHub</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="/privacy.html">Privacy Policy</a></li>
+                    <li><a href="/terms.html">Terms of Service</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <ul>
+                    <li><a href="mailto:contact@flowdesk.tech">contact@flowdesk.tech</a></li>
+                    <li><a href="https://github.com/FlowdeskApp/firestudio/issues">Report Issue</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Flowdesk. All rights reserved. Firestudio is not affiliated with Firebase, Google, or
+                Firefoo.</p>
+        </div>
+    </footer>
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Firefoo vs Firestudio Comparison",
+        "description": "Compare Firefoo vs Firestudio - the free, open-source Firebase GUI alternative. See why developers are switching to Firestudio.",
+        "url": "https://firestudio.app/compare.html",
+        "mainEntity": {
+            "@type": "SoftwareApplication",
+            "name": "Firestudio",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Windows, macOS, Linux",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            }
+        }
+    }
+    </script>
+</body>
+
+</html>
